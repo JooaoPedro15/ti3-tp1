@@ -141,6 +141,4 @@ Nesta versão, foi utilizada uma abordagem simplificada em memória para facilit
 
 ## 10. Vídeo
 
-[link do vídeo]
-
 [link do video]
