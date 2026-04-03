@@ -179,9 +179,26 @@ public class ControleCurso {
             return;
         }
 
-        curso.setEstado(3);
-        arq.update(curso);
-        System.out.println("Curso marcado como cancelado.");
+        boolean temInscritos = verificarInscritos(curso.getId()); //verifica se tem inscritos no curso
+
+        if(temInscritos){
+            //se sim, muda estado para cancelado
+            curso.setEstado(3);
+            arq.update(curso);
+            System.out.println("Ha inscritos no curso, o curso foi cancelado!");
+        }else{
+            //caos contrario exclui o registro
+            boolean excluiu = arq.delete(curso.getId());
+            if(excluiu){
+                System.out.println("Curso foi excluido com sucesso!");
+            }else{
+                System.out.println("Ocorreu um erro ao tentar excluir o curso!");
+            }
+        }
+    }
+
+    private boolean verificarInscritos(int id){
+        return false;
     }
 
     private String gerarCodigoUnico() {
