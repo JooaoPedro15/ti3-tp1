@@ -82,7 +82,25 @@ public class VisaoUsuario {
         System.out.println("PERGUNTA SECRETA: " + usuario.getPerguntaSecreta());
     }
 
+    public String leEmailRecuperacao(){
+        System.out.println("\nRECUPERACAO DE SENHA");
+        System.out.print("Informe seu e-mail cadastrado: ");
+        return lerLinha().toLowerCase();
+    }
+
+    public String leRespostaSecreta(String pergunta){
+        System.out.println("Pergunta secreta: " + pergunta);
+        System.out.print("Digite a resposta: ");
+        return lerLinha();
+    }
+
+    public String leNovaSenha(){
+        System.out.print("Digite sua nova senha: ");
+        return lerLinha();
+    }
+
     private String lerLinha() {
         return Entrada.SCANNER.nextLine().trim();
     }
+
 }

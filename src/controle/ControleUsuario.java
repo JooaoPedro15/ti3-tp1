@@ -60,6 +60,43 @@ public class ControleUsuario {
         return usuario;
     }
 
+    public void recuperarSenha(){
+        String email = visao.leEmailRecuperacao();
+        Usuario usuario = arqUsuarios.buscarPorEmail(email);
+
+        if(usuario == null){ //se nao existe
+            System.out.println("Erro: o e-mail nao foi encontrado no sistema.");
+            return;
+        }
+
+        String resposta = visao.leRespostaSecreta(usuario.getPerguntaSecreta());
+
+        String hashResposta = HashSenha.hash(resposta);
+
+        //se resposta digitada nao for equialente a armazenada
+        if(!hashResposta.equals(usuario.getHashRespostaSecreta())){
+            System.out.println("A resposta esta incorreta!");
+            System.out.println("A senha nao pode ser recuperada.");
+            return;
+        }
+
+        //caso esteja correta, altera a senha
+        String novaSenha = visao.leNovaSenha();
+        if(novaSenha.isBlank()){ //se vazia
+            System.out.println("A senha nao pode ficar em branco!");
+            return;
+        }
+
+        usuario.setHashSenha(HashSenha.hash(novaSenha)); //atualiza o hash da senha
+
+        if(arqUsuarios.update(usuario)){
+            System.out.println("SEnha atualizada com sucesso!");
+        }else{
+            System.out.println("Ocorreu um erro ao atualizar a nova senha.");
+        }
+
+    }
+
     public Usuario menuMeusDados(Usuario logado) {
         while (true) {
             System.out.println("\n> Inicio > Meus dados");

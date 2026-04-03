@@ -14,6 +14,7 @@ public class Main {
             System.out.println("--------------");
             System.out.println("\n(A) Login");
             System.out.println("(B) Novo usuario");
+            System.out.println("(C) Esqueci minha senha");
             System.out.println("(S) Sair");
             System.out.print("\nOpcao: ");
 
@@ -31,6 +32,11 @@ public class Main {
 
             if (opcao.equalsIgnoreCase("B")) {
                 controleUsuario.cadastrar();
+                continue;
+            }
+
+            if(opcao.equalsIgnoreCase("C")){
+                controleUsuario.recuperarSenha();
                 continue;
             }
 
