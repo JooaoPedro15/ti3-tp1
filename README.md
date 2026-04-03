@@ -13,8 +13,7 @@ O sistema EntrePares 1.0 permite o cadastro de usuários e a criação de cursos
 
 Cada usuário pode criar vários cursos, e cada curso pertence a apenas um usuário, caracterizando um relacionamento do tipo 1:N.
 
-Neste trabalho prático (TP1), foram implementadas as funcionalidades básicas de cadastro, autenticação e gerenciamento de cursos. A funcionalidade de inscrições será implementada no TP2.
-
+Neste trabalho prático (TP1), foram implementadas as funcionalidades básicas de cadastro, autenticação e gerenciamento de cursos.
 ---
 
 ## 2. Funcionalidades Implementadas
@@ -140,5 +139,7 @@ Nesta versão, foi utilizada uma abordagem simplificada em memória para facilit
 ---
 
 ## 10. Vídeo
+
+[link do vídeo]
 
 [link do video]
