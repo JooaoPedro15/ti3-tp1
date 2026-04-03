@@ -15,16 +15,19 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
     private static final String ARQ_INDICE_DIRETO = "dados/cursosId.hash";
     private static final String ARQ_REL_USUARIO_CURSO = "dados/usuarioCurso.idx";
     private static final String ARQ_INDICE_CODIGO = "dados/cursoCodigo.hash";
+    private static final String ARQ_INDICE_NOME = "dados/cursosNome.idx";
 
     private final TabelaHashExtensivel<Integer, Integer> indiceDireto;
     private final TabelaHashExtensivel<String, Integer> indiceCodigo;
     private final ArvoreBMais<Integer, Integer> indiceUsuarioCurso;
+    private final ArvoreBMais<String, Integer> indiceNome;
 
     public ArquivoCursos() {
         super(ARQ_DADOS, Curso::new);
         indiceDireto = new TabelaHashExtensivel<>(ARQ_INDICE_DIRETO);
         indiceCodigo = new TabelaHashExtensivel<>(ARQ_INDICE_CODIGO);
         indiceUsuarioCurso = new ArvoreBMais<>(ARQ_REL_USUARIO_CURSO);
+        indiceNome = new ArvoreBMais<>(ARQ_INDICE_NOME); //arquivo com par nome-id
         reconstruirIndices();
     }
 
@@ -42,6 +45,7 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
 
         indiceDireto.upsert(id, id);
         indiceUsuarioCurso.create(curso.getIdUsuario(), id);
+        indiceNome.create(curso.getNome(), id);
 
         if (!codigo.isEmpty()) {
             indiceCodigo.upsert(codigo, id);
@@ -91,6 +95,11 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
             indiceUsuarioCurso.create(curso.getIdUsuario(), curso.getId());
         }
 
+        if(!antigo.getNome().equals(curso.getNome())){
+            indiceNome.delete(antigo.getNome(), antigo.getId());
+            indiceNome.create(curso.getNome(), curso.getId());
+        }
+
         String codigoAntigo = normalizarCodigo(antigo.getCodigo());
 
         if (!codigoAntigo.equals(novoCodigo)) {
@@ -122,6 +131,7 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
 
         indiceDireto.delete(id);
         indiceUsuarioCurso.delete(curso.getIdUsuario(), id);
+        indiceNome.delete(curso.getNome(), id); 
 
         String codigo = normalizarCodigo(curso.getCodigo());
         if (!codigo.isEmpty()) {
@@ -132,18 +142,18 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
     }
 
     public List<Curso> listarPorUsuario(int idUsuario) {
-        ArrayList<Integer> idsCursos = indiceUsuarioCurso.read(idUsuario);
         List<Curso> cursos = new ArrayList<>();
 
-        for (Integer idCurso : idsCursos) {
-            Curso curso = super.read(idCurso);
-
-            if (curso != null) {
-                cursos.add(curso);
+        for(ArrayList<Integer> ids: indiceNome.snapshot().values()){
+            for(Integer id: ids){
+                Curso curso = super.read(id);
+                //filtra cursos do usuario logado
+                if(curso != null && curso.getIdUsuario() == idUsuario){
+                    cursos.add(curso);
+                }
             }
         }
 
-        cursos.sort(Comparator.comparing(curso -> texto(curso.getNome()), String.CASE_INSENSITIVE_ORDER));
         return cursos;
     }
 
@@ -177,10 +187,12 @@ public class ArquivoCursos extends ArquivoIndexado<Curso> {
         indiceDireto.clear();
         indiceCodigo.clear();
         indiceUsuarioCurso.clear();
+        indiceNome.clear();
 
         for (Curso curso : super.readAll()) {
             indiceDireto.upsert(curso.getId(), curso.getId());
             indiceUsuarioCurso.create(curso.getIdUsuario(), curso.getId());
+            indiceNome.create(curso.getNome(), curso.getId());
 
             String codigo = normalizarCodigo(curso.getCodigo());
             if (!codigo.isEmpty()) {
