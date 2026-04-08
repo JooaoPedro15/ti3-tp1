@@ -1,9 +1,10 @@
 # TP1 – EntrePares 1.0
 
 ## Integrantes
+
 - Jamille Ferreira
-- João Pedro   
-- Maria Clara  
+- João Pedro
+- Maria Clara
 
 ---
 
@@ -20,16 +21,18 @@ Neste trabalho prático (TP1), foram implementadas as funcionalidades básicas d
 ## 2. Funcionalidades Implementadas
 
 ### Usuários
-- Cadastro de usuário  
-- Login com email e senha  
-- Armazenamento de senha utilizando hash  
-- Busca de usuário por email  
+
+- Cadastro de usuário
+- Login com email e senha
+- Armazenamento de senha utilizando hash
+- Busca de usuário por email
 
 ### Cursos
-- Cadastro de cursos  
-- Associação automática ao usuário logado  
-- Geração de código compartilhável  
-- Listagem de cursos do usuário  
+
+- Cadastro de cursos
+- Associação automática ao usuário logado
+- Geração de código compartilhável
+- Listagem de cursos do usuário
 
 ---
 
@@ -37,16 +40,17 @@ Neste trabalho prático (TP1), foram implementadas as funcionalidades básicas d
 
 O sistema foi organizado seguindo o padrão MVC:
 
-- entidades → classes Usuario e Curso  
-- arquivos → simulação de persistência e CRUD  
-- controle → lógica do sistema  
-- visao → interação com o usuário  
-- utils → funções auxiliares  
-- estruturas → classes fornecidas 
+- entidades → classes Usuario e Curso
+- arquivos → simulação de persistência e CRUD
+- controle → lógica do sistema
+- visao → interação com o usuário
+- utils → funções auxiliares
+- estruturas → classes fornecidas
 
 ---
 
 ## 4. Modelagem de Dados
+
 Usuario (1) -------- (N) Curso
 
 Usuario
@@ -68,25 +72,26 @@ Curso
 - codigo
 - estado
 
-
 Cada curso possui um atributo `idUsuario`, que representa o dono do curso.
 
 ---
 
 ## 5. Execução
 
-1. Executar a classe `Main.java`  
-2. Selecionar login ou cadastro  
-3. Após login, acessar o menu de cursos  
+1. Executar a classe `Main.java`
+2. Selecionar login ou cadastro
+3. Após login, acessar o menu de cursos
 
 ---
 
 ## 6. Estruturas de Dados
 
 ### Índice por email
+
 Foi utilizado um índice em memória (HashMap) para permitir a busca rápida de usuários por email durante o login.
 
 ### Relacionamento usuário → cursos
+
 O relacionamento 1:N foi implementado utilizando uma estrutura de associação em memória entre idUsuario e lista de cursos.
 
 ---
@@ -130,12 +135,41 @@ Nesta versão, foi utilizada uma abordagem simplificada em memória para facilit
 
 ## 9. Evidências de Execução
 
-[Inserir prints de:
+#### Cadastro de Usuário
 
-- Cadastro de usuário  
-- Login  
-- Criação de curso  
-- Listagem de cursos]  
+<img src="/public/tela_cadastro.jpg">
+
+#### Login de Usuário
+
+<img src="/public/tela_login.jpg">
+
+#### Exibir dados do Usuário e Alterar dados
+
+<img src="/public/tela_dados_do_usuario_e_alteracao.jpg">
+
+#### Esqueci minha Senha
+
+<img src="/public/tela_esquecer_senha.jpg">
+
+#### Excluir Usuário
+
+<img src="/public/tela_excluir_usuario.jpg">
+
+#### Cadastro de Curso
+
+<img src="/public/tela_cadastro_de_curso.jpg">
+
+#### Exibir dados do Curso
+
+<img src="/public/tela_dados_curso.jpg">
+
+#### Atualizar Curso
+
+<img src="/public/tela_atualizar_curso.jpg">
+
+#### Encerrar inscrições e Excluir Curso
+
+<img src="/public/tela_encerrar_inscricoes_e_deletar_curso.jpg">
 
 ---
 
