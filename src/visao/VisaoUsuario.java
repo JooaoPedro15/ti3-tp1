@@ -21,7 +21,7 @@ public class VisaoUsuario {
         String pergunta = lerLinha();
 
         System.out.print("Resposta secreta: ");
-        String resposta = lerLinha();
+        String resposta = lerLinha().toLowerCase();
 
         Usuario usuario = new Usuario();
         usuario.setNome(nome);
@@ -68,7 +68,7 @@ public class VisaoUsuario {
         usuario.setPerguntaSecreta(pergunta.isBlank() ? atual.getPerguntaSecreta() : pergunta);
 
         System.out.print("Nova resposta secreta: ");
-        String resposta = lerLinha();
+        String resposta = lerLinha().toLowerCase();
         usuario.setHashRespostaSecreta(resposta.isBlank() ? null : resposta);
 
         return usuario;
@@ -91,7 +91,7 @@ public class VisaoUsuario {
     public String leRespostaSecreta(String pergunta){
         System.out.println("Pergunta secreta: " + pergunta);
         System.out.print("Digite a resposta: ");
-        return lerLinha();
+        return lerLinha().toLowerCase();
     }
 
     public String leNovaSenha(){

@@ -28,7 +28,7 @@ public class ControleUsuario {
         }
 
         usuario.setHashSenha(HashSenha.hash(usuario.getHashSenha()));
-        usuario.setHashRespostaSecreta(HashSenha.hash(usuario.getHashRespostaSecreta()));
+        usuario.setHashRespostaSecreta(HashSenha.hash(usuario.getHashRespostaSecreta().trim().toLowerCase()));
 
         int id = arqUsuarios.create(usuario);
 
@@ -71,7 +71,7 @@ public class ControleUsuario {
 
         String resposta = visao.leRespostaSecreta(usuario.getPerguntaSecreta());
 
-        String hashResposta = HashSenha.hash(resposta);
+        String hashResposta = HashSenha.hash(resposta.trim().toLowerCase()); //padroniza a resposta antes de transformar em hash
 
         //se resposta digitada nao for equialente a armazenada
         if(!hashResposta.equals(usuario.getHashRespostaSecreta())){
