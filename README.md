@@ -229,4 +229,4 @@ Resposta: Sim.
 
 ## 11. Video
 
-[Link ou Video]
+[Assistir video](./video/video.mp4)
