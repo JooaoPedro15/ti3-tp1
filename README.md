@@ -3,8 +3,8 @@
 ## Integrantes
 
 - Jamille Ferreira
-- João Pedro
-- Maria Clara
+- João Pedro Costa
+- Maria Clara G. Soares
 
 ## 1. Descricao do sistema
 
