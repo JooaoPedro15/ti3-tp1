@@ -1,14 +1,18 @@
 import arquivos.ArquivoCursos;
+import arquivos.ArquivoUsuarios;
 import controle.ControleCurso;
 import controle.ControleUsuario;
+import controle.ControleCursoUsuario;
 import entidades.Usuario;
 import utils.Entrada;
 
 public class Main {
 
     private static final ArquivoCursos arqCursos = new ArquivoCursos();
+    private static final ArquivoUsuarios arqUsuarios = new ArquivoUsuarios();
     private static final ControleUsuario controleUsuario = new ControleUsuario(arqCursos);
     private static final ControleCurso controleCurso = new ControleCurso(arqCursos);
+    private static final ControleCursoUsuario controleCursoUsuario = new ControleCursoUsuario(arqCursos, arqUsuarios);
 
     public static void main(String[] args) {
         while (true) {
