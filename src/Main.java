@@ -75,7 +75,7 @@ public class Main {
             }
 
             if (opcao.equalsIgnoreCase("C")) {
-                System.out.println("Modulo de inscricoes sera implementado no TP2.");
+                controleCursoUsuario.menuInscricoes(logado);
                 continue;
             }
 
