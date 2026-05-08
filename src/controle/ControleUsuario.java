@@ -37,7 +37,7 @@ public class ControleUsuario {
             return;
         }
 
-        System.out.println("Usuario cadastrado com sucesso. ID: " + id);
+        System.out.println("Usuario cadastrado com sucesso.");
     }
 
     public Usuario login() {

@@ -77,7 +77,7 @@ public class ControleCurso {
             return;
         }
 
-        System.out.println("Curso criado com sucesso. ID: " + id);
+        System.out.println("Curso criado com sucesso.");
     }
 
     private void menuCurso(int idCurso) {

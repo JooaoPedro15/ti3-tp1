@@ -76,7 +76,6 @@ public class VisaoUsuario {
 
     public void mostraUsuario(Usuario usuario) {
         System.out.println("\nMEUS DADOS");
-        System.out.println("ID..............: " + usuario.getId());
         System.out.println("NOME............: " + usuario.getNome());
         System.out.println("E-MAIL..........: " + usuario.getEmail());
         System.out.println("PERGUNTA SECRETA: " + usuario.getPerguntaSecreta());

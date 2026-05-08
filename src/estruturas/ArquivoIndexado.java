@@ -90,7 +90,7 @@ public class ArquivoIndexado<T extends Registro> implements AutoCloseable {
 
             return lerRegistro(endereco, id);
         } catch (IOException e) {
-            throw new RuntimeException("Erro ao ler registro id=" + id, e);
+            throw new RuntimeException("Erro ao ler registro", e);
         }
     }
 
@@ -153,7 +153,7 @@ public class ArquivoIndexado<T extends Registro> implements AutoCloseable {
 
             return true;
         } catch (IOException e) {
-            throw new RuntimeException("Erro ao atualizar registro id=" + registroAtualizado.getId(), e);
+            throw new RuntimeException("Erro ao atualizar registro", e);
         }
     }
 
@@ -188,7 +188,7 @@ public class ArquivoIndexado<T extends Registro> implements AutoCloseable {
             indiceDireto.delete(id);
             return true;
         } catch (IOException e) {
-            throw new RuntimeException("Erro ao excluir registro id=" + id, e);
+            throw new RuntimeException("Erro ao excluir registro ", e);
         }
     }
 
