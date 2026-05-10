@@ -6,17 +6,30 @@ import entidades.Usuario;
 import utils.Entrada;
 import utils.GeradorCodigo;
 import visao.VisaoCurso;
-
+import arquivos.ArquivoUsuarios;
 import java.util.List;
 
 public class ControleCurso {
 
     private final ArquivoCursos arq;
     private final VisaoCurso visao;
+    private final ControleCursoUsuario controleCursoUsuario;
 
-    public ControleCurso(ArquivoCursos arq) {
+    public ControleCurso(
+        ArquivoCursos arq,
+        ArquivoUsuarios arqUsuarios
+    ) {
+
         this.arq = arq;
-        this.visao = new VisaoCurso();
+
+        this.visao =
+                new VisaoCurso();
+
+        this.controleCursoUsuario =
+                new ControleCursoUsuario(
+                        arq,
+                        arqUsuarios
+                );
     }
 
     public void menu(Usuario usuario) {
@@ -68,7 +81,7 @@ public class ControleCurso {
 
         curso.setIdUsuario(usuario.getId());
         curso.setCodigo(gerarCodigoUnico());
-        curso.setEstado(0);
+        curso.setEstado(Curso.ATIVO);
 
         int id = arq.create(curso);
 
@@ -103,7 +116,11 @@ public class ControleCurso {
             String opcao = Entrada.SCANNER.nextLine().trim();
 
             if (opcao.equalsIgnoreCase("A")) {
-                System.out.println("Gerenciamento de inscritos sera implementado no TP2.");
+                controleCursoUsuario
+                        .abrirGerenciamentoInscritos(
+                                curso
+                        );
+
                 continue;
             }
 
@@ -152,29 +169,37 @@ public class ControleCurso {
     }
 
     private void encerrarInscricoes(Curso curso) {
-        if (curso.getEstado() != 0) {
+        if (curso.getEstado() != Curso.ATIVO) {
             System.out.println("Somente cursos em estado ativo (0) podem encerrar inscricoes.");
             return;
         }
 
-        curso.setEstado(1);
+        curso.setEstado(
+            Curso.INSCRICOES_ENCERRADAS
+        );
         arq.update(curso);
         System.out.println("Inscricoes encerradas.");
     }
 
     private void concluirCurso(Curso curso) {
-        if (curso.getEstado() == 3) {
+        if (
+            curso.getEstado()
+            == Curso.CANCELADO
+        ) {
             System.out.println("Curso cancelado nao pode ser concluido.");
             return;
         }
 
-        curso.setEstado(2);
+        curso.setEstado(Curso.CONCLUIDO);
         arq.update(curso);
         System.out.println("Curso concluido.");
     }
 
     private void cancelarCurso(Curso curso) {
-        if (curso.getEstado() == 2) {
+        if (
+            curso.getEstado()
+            == Curso.CONCLUIDO
+        ) {
             System.out.println("Curso concluido nao pode ser cancelado.");
             return;
         }
@@ -182,7 +207,7 @@ public class ControleCurso {
         boolean temInscritos = verificarInscritos(curso.getId());
 
         if (temInscritos) {
-            curso.setEstado(3);
+            curso.setEstado(Curso.CANCELADO);
             arq.update(curso);
             System.out.println("Ha inscritos no curso, o curso foi cancelado!");
         } else {
@@ -195,8 +220,12 @@ public class ControleCurso {
         }
     }
 
-    private boolean verificarInscritos(int id) {
-        return false;
+    private boolean verificarInscritos(
+        int id
+    ){
+
+        return controleCursoUsuario
+                .cursoTemInscritos(id);
     }
 
     private String gerarCodigoUnico() {

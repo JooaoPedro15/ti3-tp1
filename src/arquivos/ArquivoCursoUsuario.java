@@ -12,6 +12,8 @@ import entidades.Curso;
 import entidades.CursoUsuario;
 import estruturas.ArquivoIndexado;
 
+import java.util.ArrayList;
+
 public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
     private static final String ARQ_DADOS = "dados/cursoUsuario.db";
     private static final String ARQ_INDICE_DIRETO = "dados/cursoUsuarioId.hash";
@@ -72,6 +74,65 @@ public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
         return true;
     }
 
+    public ArrayList<CursoUsuario> readByCurso(int idCurso){
+
+        ArrayList<CursoUsuario> lista = new ArrayList<>();
+
+        try{
+
+            ArrayList<ParIdId> pares =
+                    indiceCursos.read(new ParIdId(idCurso, -1));
+
+            for(ParIdId par : pares){
+
+                CursoUsuario cursoUsuario =
+                        super.read(par.idInscricao);
+
+                if(cursoUsuario != null){
+                    lista.add(cursoUsuario);
+                }
+            }
+
+        }catch(Exception e){
+            System.out.println(
+                    "Erro ao buscar inscrições do curso\n"
+                    + e.getMessage()
+            );
+        }
+
+        return lista;
+    }
+
+    public ArrayList<CursoUsuario> readByUsuario(int idUsuario){
+
+        ArrayList<CursoUsuario> lista = new ArrayList<>();
+
+        try{
+
+            ArrayList<ParIdId> pares =
+                    indiceUsuarios.read(
+                            new ParIdId(idUsuario, -1)
+                    );
+
+            for(ParIdId par : pares){
+
+                CursoUsuario cursoUsuario =
+                        super.read(par.idInscricao);
+
+                if(cursoUsuario != null){
+                    lista.add(cursoUsuario);
+                }
+            }
+
+        }catch(Exception e){
+            System.out.println(
+                    "Erro ao buscar inscrições do usuário\n"
+                    + e.getMessage()
+            );
+        }
+
+        return lista;
+    }
     //implementar listagem de inscricoes de curso 
     // e lista de alunos nos cursos
 
@@ -87,6 +148,14 @@ public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
         public ParIdId(int idEstrangeiro, int idInscricao){
             this.idEstrangeiro = idEstrangeiro;
             this.idInscricao = idInscricao;
+        }
+
+        public int getIdEstrangeiro(){
+            return this.idEstrangeiro;
+        }
+
+        public int getIdInscricao(){
+            return this.idInscricao;
         }
 
         @Override

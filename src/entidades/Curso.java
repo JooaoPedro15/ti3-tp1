@@ -8,6 +8,11 @@ import java.io.IOException;
 
 public class Curso implements Registro {
 
+    public static final int ATIVO = 0;
+    public static final int INSCRICOES_ENCERRADAS = 1;
+    public static final int CONCLUIDO = 2;
+    public static final int CANCELADO = 3;
+
     private int id;
     private int idUsuario;
     private String nome;
@@ -90,6 +95,26 @@ public class Curso implements Registro {
 
     public void setEstado(int estado) {
         this.estado = estado;
+    }
+
+    public String getEstadoTexto(){
+        switch(this.estado){
+
+            case ATIVO:
+                return "ABERTO";
+
+            case INSCRICOES_ENCERRADAS:
+                return "INSCRIÇÕES ENCERRADAS";
+
+            case CONCLUIDO:
+                return "CURSO CONCLUÍDO";
+
+            case CANCELADO:
+                return "CURSO CANCELADO";
+
+            default:
+                return "DESCONHECIDO";
+        }
     }
 
     @Override

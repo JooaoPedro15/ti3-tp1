@@ -16,6 +16,20 @@ public class CursoUsuario implements Registro{
         this(-1, -1, 0L);
     }
 
+    public CursoUsuario(
+        int idCurso,
+        int idUsuario
+    ){
+
+        this.idCurso = idCurso;
+        this.idUsuario = idUsuario;
+
+        this.dataInscricao =
+                System.currentTimeMillis();
+
+        this.idCursoUsuario = -1;
+    }
+
     public CursoUsuario(int idCurso, int idUsuario, long dataInscricao){
         this.idCurso = idCurso;
         this.idUsuario = idUsuario;
