@@ -318,14 +318,20 @@ As imagens abaixo registram operacoes ja demonstradas no sistema
 
 #### Telas de inscricao
 
+<img src="/public/tela_incricao.jpg"> 
+
 #### Busca por codigo
 
-#### Listagem paginada
+<img src="/public/busca_por_codigo.jpg">
 
 #### Gerenciamento de inscritos
 
+<img src="/public/gerenciamento_inscritos.jpg">
+
 #### Exportacao CSV
+
+<img src="/public/csv.jpg">
 
 ## 11. Video
 
-[Assistir video](./video/video.mp4)
+[Assistir video](./video/tp2.mp4)
