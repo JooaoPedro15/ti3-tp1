@@ -2,20 +2,44 @@ package controle;
 
 import arquivos.ArquivoCursos;
 import arquivos.ArquivoUsuarios;
+import entidades.Curso;
 import entidades.Usuario;
 import utils.Entrada;
 import utils.HashSenha;
 import visao.VisaoUsuario;
 
+import java.util.List;
+
 public class ControleUsuario {
 
     private final ArquivoUsuarios arqUsuarios;
     private final ArquivoCursos arqCursos;
+    private final ControleCursoUsuario controleCursoUsuario;
     private final VisaoUsuario visao;
 
     public ControleUsuario(ArquivoCursos arqCursos) {
-        this.arqUsuarios = new ArquivoUsuarios();
+        this(new ArquivoUsuarios(), arqCursos);
+    }
+
+    public ControleUsuario(
+        ArquivoUsuarios arqUsuarios,
+        ArquivoCursos arqCursos
+    ) {
+        this(
+                arqUsuarios,
+                arqCursos,
+                new ControleCursoUsuario(arqCursos, arqUsuarios)
+        );
+    }
+
+    public ControleUsuario(
+        ArquivoUsuarios arqUsuarios,
+        ArquivoCursos arqCursos,
+        ControleCursoUsuario controleCursoUsuario
+    ) {
+        this.arqUsuarios = arqUsuarios;
         this.arqCursos = arqCursos;
+        this.controleCursoUsuario = controleCursoUsuario;
         this.visao = new VisaoUsuario();
     }
 
@@ -168,6 +192,19 @@ public class ControleUsuario {
             return false;
         }
 
+        List<Curso> cursosDoUsuario =
+                arqCursos.listarPorUsuario(usuario.getId());
+
+        for (Curso curso : cursosDoUsuario) {
+            if (
+                curso.getEstado() == Curso.CONCLUIDO
+                || curso.getEstado() == Curso.CANCELADO
+            ) {
+                controleCursoUsuario.removerInscricoesDoCurso(curso.getId());
+            }
+        }
+
+        controleCursoUsuario.removerInscricoesDoUsuario(usuario.getId());
         arqCursos.removerInativosDoUsuario(usuario.getId());
 
         if (!arqUsuarios.delete(usuario.getId())) {

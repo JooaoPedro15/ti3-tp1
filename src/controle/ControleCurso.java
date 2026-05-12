@@ -20,16 +20,25 @@ public class ControleCurso {
         ArquivoUsuarios arqUsuarios
     ) {
 
+        this(
+                arq,
+                arqUsuarios,
+                new ControleCursoUsuario(arq, arqUsuarios)
+        );
+    }
+
+    public ControleCurso(
+        ArquivoCursos arq,
+        ArquivoUsuarios arqUsuarios,
+        ControleCursoUsuario controleCursoUsuario
+    ) {
+
         this.arq = arq;
 
         this.visao =
                 new VisaoCurso();
 
-        this.controleCursoUsuario =
-                new ControleCursoUsuario(
-                        arq,
-                        arqUsuarios
-                );
+        this.controleCursoUsuario = controleCursoUsuario;
     }
 
     public void menu(Usuario usuario) {
@@ -211,6 +220,7 @@ public class ControleCurso {
             arq.update(curso);
             System.out.println("Ha inscritos no curso, o curso foi cancelado!");
         } else {
+            controleCursoUsuario.removerInscricoesDoCurso(curso.getId());
             boolean excluiu = arq.delete(curso.getId());
             if (excluiu) {
                 System.out.println("Curso foi excluido com sucesso!");

@@ -10,9 +10,17 @@ public class Main {
 
     private static final ArquivoCursos arqCursos = new ArquivoCursos();
     private static final ArquivoUsuarios arqUsuarios = new ArquivoUsuarios();
-    private static final ControleUsuario controleUsuario = new ControleUsuario(arqCursos);
-    private static final ControleCurso controleCurso = new ControleCurso(arqCursos);
     private static final ControleCursoUsuario controleCursoUsuario = new ControleCursoUsuario(arqCursos, arqUsuarios);
+    private static final ControleUsuario controleUsuario = new ControleUsuario(
+            arqUsuarios,
+            arqCursos,
+            controleCursoUsuario
+    );
+    private static final ControleCurso controleCurso = new ControleCurso(
+            arqCursos,
+            arqUsuarios,
+            controleCursoUsuario
+    );
 
     public static void main(String[] args) {
         while (true) {

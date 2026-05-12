@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import aed3.ArvoreBMais;
 import aed3.RegistroArvoreBMais;
@@ -13,6 +15,7 @@ import entidades.CursoUsuario;
 import estruturas.ArquivoIndexado;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
     private static final String ARQ_DADOS = "dados/cursoUsuario.db";
@@ -26,8 +29,12 @@ public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
     public ArquivoCursoUsuario() throws Exception{
         super(ARQ_DADOS, ARQ_INDICE_DIRETO, CursoUsuario::new);
 
+        limparArquivoIndice(ARQ_INDICE_CURSOS);
+        limparArquivoIndice(ARQ_INDICE_USUARIOS);
+
         indiceCursos = new ArvoreBMais<>(ParIdId.class.getConstructor(), 5, ARQ_INDICE_CURSOS);
         indiceUsuarios = new ArvoreBMais<>(ParIdId.class.getConstructor(), 5, ARQ_INDICE_USUARIOS);
+        reconstruirIndices();
     }
 
     @Override
@@ -69,6 +76,59 @@ public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
 
         } catch (Exception e) {
             System.out.println("Erro ao deletar\n" + e.getMessage());
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean update(CursoUsuario cursoUsuario){
+        CursoUsuario antigo = read(cursoUsuario.getId());
+
+        if(antigo == null){
+            return false;
+        }
+
+        boolean ok = super.update(cursoUsuario);
+
+        if(!ok){
+            return false;
+        }
+
+        try{
+            if(antigo.getIdCurso() != cursoUsuario.getIdCurso()){
+                indiceCursos.delete(
+                        new ParIdId(
+                                antigo.getIdCurso(),
+                                cursoUsuario.getId()
+                        )
+                );
+
+                indiceCursos.create(
+                        new ParIdId(
+                                cursoUsuario.getIdCurso(),
+                                cursoUsuario.getId()
+                        )
+                );
+            }
+
+            if(antigo.getIdUsuario() != cursoUsuario.getIdUsuario()){
+                indiceUsuarios.delete(
+                        new ParIdId(
+                                antigo.getIdUsuario(),
+                                cursoUsuario.getId()
+                        )
+                );
+
+                indiceUsuarios.create(
+                        new ParIdId(
+                                cursoUsuario.getIdUsuario(),
+                                cursoUsuario.getId()
+                        )
+                );
+            }
+        }catch(Exception e){
+            System.out.println("Erro ao atualizar indices\n" + e.getMessage());
         }
 
         return true;
@@ -133,8 +193,34 @@ public class ArquivoCursoUsuario extends ArquivoIndexado<CursoUsuario>{
 
         return lista;
     }
-    //implementar listagem de inscricoes de curso 
-    // e lista de alunos nos cursos
+
+    private void reconstruirIndices(){
+        try{
+            List<CursoUsuario> inscricoes = super.readAll();
+
+            for(CursoUsuario cursoUsuario : inscricoes){
+                indiceCursos.create(
+                        new ParIdId(
+                                cursoUsuario.getIdCurso(),
+                                cursoUsuario.getId()
+                        )
+                );
+
+                indiceUsuarios.create(
+                        new ParIdId(
+                                cursoUsuario.getIdUsuario(),
+                                cursoUsuario.getId()
+                        )
+                );
+            }
+        }catch(Exception e){
+            System.out.println("Erro ao reconstruir indices\n" + e.getMessage());
+        }
+    }
+
+    private void limparArquivoIndice(String caminho) throws IOException{
+        Files.deleteIfExists(Paths.get(caminho));
+    }
 
     public static class ParIdId implements RegistroArvoreBMais<ParIdId>{
         public int idEstrangeiro;

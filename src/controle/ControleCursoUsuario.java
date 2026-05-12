@@ -1,104 +1,527 @@
 package controle;
 
+import arquivos.ArquivoCursoUsuario;
 import arquivos.ArquivoCursos;
 import arquivos.ArquivoUsuarios;
-import arquivos.ArquivoCursoUsuario;
+import entidades.Curso;
 import entidades.CursoUsuario;
 import entidades.Usuario;
 import utils.Entrada;
-import entidades.Curso;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.io.FileWriter;
+
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class ControleCursoUsuario {
-    private ArquivoCursos arqCursos;
-    private ArquivoUsuarios arqUsuarios;
+
+    private static final int TAMANHO_PAGINA = 10;
+    private static final DateTimeFormatter FORMATO_DATA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private final ArquivoCursos arqCursos;
+    private final ArquivoUsuarios arqUsuarios;
     private ArquivoCursoUsuario arqCursoUsuario;
 
     public ControleCursoUsuario(
         ArquivoCursos arqCursos,
         ArquivoUsuarios arqUsuarios
-    ){
+    ) {
 
         this.arqCursos = arqCursos;
         this.arqUsuarios = arqUsuarios;
 
-        try{
-            this.arqCursoUsuario =
-                    new ArquivoCursoUsuario();
-
-        }catch(Exception e){
-
+        try {
+            this.arqCursoUsuario = new ArquivoCursoUsuario();
+        } catch (Exception e) {
             System.out.println(
-                    "Erro ao abrir arquivo de inscrições\n"
+                    "Erro ao abrir arquivo de inscricoes\n"
                     + e.getMessage()
             );
+        }
+    }
+
+    public void menuInscricoes(Usuario logado) {
+        while (true) {
+            List<InscricaoCurso> inscricoes =
+                    listarInscricoesDoUsuario(logado.getId());
+
+            System.out.println("\nEntrePares 1.0");
+            System.out.println("--------------");
+            System.out.println("> Inicio > Minhas inscricoes");
+            System.out.println("\nINSCRICOES");
+
+            if (inscricoes.isEmpty()) {
+                System.out.println("(nenhuma inscricao)");
+            } else {
+                for (int i = 0; i < inscricoes.size(); i++) {
+                    Curso curso = inscricoes.get(i).curso;
+
+                    System.out.println(
+                            "(" + (i + 1) + ") "
+                            + curso.getNome()
+                            + " - "
+                            + curso.getDataInicio()
+                            + sufixoEstado(curso)
+                    );
+                }
+            }
+
+            System.out.println("\n(A) Buscar curso por codigo");
+            System.out.println("(B) Buscar curso por palavras-chave");
+            System.out.println("(C) Listar todos os cursos");
+            System.out.println("\n(R) Retornar ao menu anterior");
+            System.out.print("\nOpcao: ");
+
+            String op = Entrada.SCANNER.nextLine().trim();
+
+            Integer indice = parseInteiro(op);
+
+            if (indice != null) {
+                if (indice >= 1 && indice <= inscricoes.size()) {
+                    visualizarMinhaInscricao(
+                            logado,
+                            inscricoes.get(indice - 1).curso
+                    );
+                } else {
+                    System.out.println("\nOpcao invalida.");
+                }
+
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("A")) {
+                buscarCursoPorCodigo(logado);
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("B")) {
+                System.out.println(
+                        "\nBusca por palavra-chave sera implementada no TP3."
+                );
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("C")) {
+                listarTodosCursos(logado);
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("R")) {
+                return;
+            }
+
+            System.out.println("\nOpcao invalida.");
+        }
+    }
+
+    private void buscarCursoPorCodigo(Usuario logado) {
+        System.out.println("\nEntrePares 1.0");
+        System.out.println("--------------");
+        System.out.println("> Inicio > Minhas inscricoes > Buscar curso por codigo");
+        System.out.print("\nDigite o codigo do curso: ");
+
+        String codigo = Entrada.SCANNER.nextLine().trim();
+
+        try {
+            Curso cursoEncontrado = arqCursos.buscarPorCodigo(codigo);
+
+            if (cursoEncontrado == null) {
+                System.out.println("\nCurso nao encontrado.");
+                return;
+            }
+
+            visualizarCursoParaInscricao(
+                    logado,
+                    cursoEncontrado,
+                    "> Inicio > Minhas inscricoes > "
+                    + cursoEncontrado.getNome()
+            );
+
+        } catch (Exception e) {
+            System.out.println(
+                    "\nErro ao buscar curso!\n"
+                    + e.getMessage()
+            );
+        }
+    }
+
+    private void listarTodosCursos(Usuario logado) {
+        try {
+            List<Curso> cursos = new ArrayList<>(arqCursos.readAll());
+
+            cursos.sort(
+                    Comparator
+                            .comparing(this::dataInicioOrdenacao)
+                            .thenComparing(
+                                    Curso::getNome,
+                                    String.CASE_INSENSITIVE_ORDER
+                            )
+            );
+
+            if (cursos.isEmpty()) {
+                System.out.println("\nNenhum curso cadastrado.");
+                return;
+            }
+
+            int pagina = 0;
+
+            while (true) {
+                int inicio = pagina * TAMANHO_PAGINA;
+                int fim = Math.min(inicio + TAMANHO_PAGINA, cursos.size());
+                int totalPaginas =
+                        (int) Math.ceil((double) cursos.size() / TAMANHO_PAGINA);
+
+                System.out.println("\nEntrePares 1.0");
+                System.out.println("--------------");
+                System.out.println("> Inicio > Minhas inscricoes > Lista de cursos");
+                System.out.println(
+                        "\nPagina "
+                        + (pagina + 1)
+                        + " de "
+                        + totalPaginas
+                );
+                System.out.println();
+
+                for (int i = inicio; i < fim; i++) {
+                    int numeroTela = i - inicio + 1;
+                    String opcao = numeroTela == TAMANHO_PAGINA
+                            ? "0"
+                            : Integer.toString(numeroTela);
+                    Curso curso = cursos.get(i);
+
+                    System.out.println(
+                            "(" + opcao + ") "
+                            + curso.getNome()
+                            + " - "
+                            + curso.getDataInicio()
+                            + sufixoEstado(curso)
+                    );
+                }
+
+                System.out.println("\n(A) Pagina anterior");
+                System.out.println("(B) Proxima pagina");
+                System.out.println("\n(R) Retornar ao menu anterior");
+                System.out.print("\nOpcao: ");
+
+                String op = Entrada.SCANNER.nextLine().trim();
+                int indiceReal = indiceOpcaoPagina(op, inicio, fim);
+
+                if (indiceReal >= 0) {
+                    visualizarCursoParaInscricao(
+                            logado,
+                            cursos.get(indiceReal),
+                            "> Inicio > Minhas inscricoes > Lista de cursos > "
+                            + cursos.get(indiceReal).getNome()
+                    );
+                    continue;
+                }
+
+                if (op.equalsIgnoreCase("A")) {
+                    if (pagina > 0) {
+                        pagina--;
+                    }
+                    continue;
+                }
+
+                if (op.equalsIgnoreCase("B")) {
+                    if (fim < cursos.size()) {
+                        pagina++;
+                    }
+                    continue;
+                }
+
+                if (op.equalsIgnoreCase("R")) {
+                    return;
+                }
+
+                System.out.println("\nOpcao invalida.");
+            }
+
+        } catch (Exception e) {
+            System.out.println(
+                    "\nErro ao listar cursos!\n"
+                    + e.getMessage()
+            );
+        }
+    }
+
+    private void visualizarCursoParaInscricao(
+        Usuario logado,
+        Curso curso,
+        String caminho
+    ) {
+
+        try {
+            while (true) {
+                mostrarDadosCurso(curso, caminho);
+
+                System.out.println("\n(A) Fazer minha inscricao no curso");
+                System.out.println("\n(R) Retornar ao menu anterior");
+                System.out.print("\nOpcao: ");
+
+                String op = Entrada.SCANNER.nextLine().trim();
+
+                if (op.equalsIgnoreCase("A")) {
+                    boolean ok =
+                            inscreverUsuario(curso.getId(), logado.getId());
+
+                    if (ok) {
+                        System.out.println("\nInscricao realizada!");
+                    } else {
+                        System.out.println(
+                                "\nNao foi possivel realizar inscricao."
+                        );
+                    }
+                    return;
+                }
+
+                if (op.equalsIgnoreCase("R")) {
+                    return;
+                }
+
+                System.out.println("\nOpcao invalida.");
+            }
+
+        } catch (Exception e) {
+            System.out.println(
+                    "\nErro ao visualizar curso!\n"
+                    + e.getMessage()
+            );
+        }
+    }
+
+    private void visualizarMinhaInscricao(
+        Usuario logado,
+        Curso curso
+    ) {
+
+        try {
+            while (true) {
+                mostrarDadosCurso(
+                        curso,
+                        "> Inicio > Minhas inscricoes > "
+                        + curso.getNome()
+                );
+
+                System.out.println("\n(A) Cancelar minha inscricao no curso");
+                System.out.println("\n(R) Retornar ao menu anterior");
+                System.out.print("\nOpcao: ");
+
+                String op = Entrada.SCANNER.nextLine().trim();
+
+                if (op.equalsIgnoreCase("A")) {
+                    boolean ok =
+                            cancelarInscricao(
+                                    curso.getId(),
+                                    logado.getId()
+                            );
+
+                    if (ok) {
+                        System.out.println(
+                                "\nInscricao cancelada com sucesso!"
+                        );
+                    } else {
+                        System.out.println(
+                                "\nNao foi possivel cancelar a inscricao."
+                        );
+                    }
+                    return;
+                }
+
+                if (op.equalsIgnoreCase("R")) {
+                    return;
+                }
+
+                System.out.println("\nOpcao invalida.");
+            }
+
+        } catch (Exception e) {
+            System.out.println(
+                    "\nErro ao visualizar inscricao!\n"
+                    + e.getMessage()
+            );
+        }
+    }
+
+    public void abrirGerenciamentoInscritos(Curso curso) {
+        while (true) {
+            List<InscricaoUsuario> inscricoes =
+                    listarInscricoesDoCurso(curso.getId());
+
+            System.out.println("\nEntrePares 1.0");
+            System.out.println("--------------");
+            System.out.println(
+                    "> Inicio > Meus cursos > "
+                    + curso.getNome()
+                    + " > Inscricoes"
+            );
+            System.out.println();
+
+            if (inscricoes.isEmpty()) {
+                System.out.println("(nenhum usuario inscrito)");
+            } else {
+                for (int i = 0; i < inscricoes.size(); i++) {
+                    InscricaoUsuario inscricao = inscricoes.get(i);
+
+                    System.out.println(
+                            "(" + (i + 1) + ") "
+                            + inscricao.usuario.getNome()
+                            + " ("
+                            + formatarDataInscricao(
+                                    inscricao.inscricao.getDataInscricao()
+                            )
+                            + ")"
+                    );
+                }
+            }
+
+            System.out.println("\n(A) Exportar lista");
+            System.out.println("\n(R) Retornar ao menu anterior");
+            System.out.print("\nOpcao: ");
+
+            String op = Entrada.SCANNER.nextLine().trim();
+            Integer indice = parseInteiro(op);
+
+            if (indice != null) {
+                if (indice >= 1 && indice <= inscricoes.size()) {
+                    visualizarUsuarioInscrito(
+                            curso,
+                            inscricoes.get(indice - 1)
+                    );
+                } else {
+                    System.out.println("\nOpcao invalida.");
+                }
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("A")) {
+                exportarCSV(curso);
+                continue;
+            }
+
+            if (op.equalsIgnoreCase("R")) {
+                return;
+            }
+
+            System.out.println("\nOpcao invalida.");
+        }
+    }
+
+    private void visualizarUsuarioInscrito(
+        Curso curso,
+        InscricaoUsuario inscricao
+    ) {
+
+        while (true) {
+            Usuario usuario = inscricao.usuario;
+
+            System.out.println("\nEntrePares 1.0");
+            System.out.println("--------------");
+            System.out.println(
+                    "> Inicio > Meus cursos > "
+                    + curso.getNome()
+                    + " > Inscricoes > "
+                    + usuario.getNome()
+            );
+            System.out.println("\nNOME..............: " + usuario.getNome());
+            System.out.println("E-MAIL............: " + usuario.getEmail());
+            System.out.println(
+                    "DATA DA INSCRICAO.: "
+                    + formatarDataInscricao(
+                            inscricao.inscricao.getDataInscricao()
+                    )
+            );
+
+            System.out.println("\n(A) Cancelar inscricao deste usuario");
+            System.out.println("\n(R) Retornar ao menu anterior");
+            System.out.print("\nOpcao: ");
+
+            String op = Entrada.SCANNER.nextLine().trim();
+
+            if (op.equalsIgnoreCase("A")) {
+                boolean ok =
+                        arqCursoUsuario.delete(
+                                inscricao.inscricao.getId()
+                        );
+
+                if (ok) {
+                    System.out.println("\nInscricao cancelada com sucesso!");
+                } else {
+                    System.out.println(
+                            "\nNao foi possivel cancelar a inscricao."
+                    );
+                }
+                return;
+            }
+
+            if (op.equalsIgnoreCase("R")) {
+                return;
+            }
+
+            System.out.println("\nOpcao invalida.");
         }
     }
 
     private boolean inscreverUsuario(
         int idCurso,
         int idUsuario
-    ){
+    ) {
 
-        try{
-
+        try {
             Curso curso = arqCursos.read(idCurso);
 
-            if(curso == null){
+            if (curso == null) {
+                System.out.println("\nCurso inexistente.");
+                return false;
+            }
 
+            if (curso.getIdUsuario() == idUsuario) {
                 System.out.println(
-                        "\nCurso inexistente."
+                        "\nVoce nao pode se inscrever no proprio curso."
                 );
+                return false;
+            }
 
+            if (curso.getEstado() != Curso.ATIVO) {
+                System.out.println(
+                        "\nEste curso nao esta aberto para inscricoes."
+                );
                 return false;
             }
 
             Usuario usuario = arqUsuarios.read(idUsuario);
 
-            if(usuario == null){
-
-                System.out.println(
-                        "\nUsuário inexistente."
-                );
-
+            if (usuario == null) {
+                System.out.println("\nUsuario inexistente.");
                 return false;
             }
 
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByUsuario(
-                            idUsuario
-                    );
-
-            for(CursoUsuario cu : inscricoes){
-
-                if(cu.getIdCurso() == idCurso){
-
-                    System.out.println(
-                            "\nVocê já está inscrito neste curso."
-                    );
-
-                    return false;
-                }
+            if (buscarInscricao(idCurso, idUsuario) != null) {
+                System.out.println(
+                        "\nVoce ja esta inscrito neste curso."
+                );
+                return false;
             }
 
             CursoUsuario novaInscricao =
-                    new CursoUsuario(
-                            idCurso,
-                            idUsuario
-                    );
+                    new CursoUsuario(idCurso, idUsuario);
 
-            arqCursoUsuario.create(novaInscricao);
+            int idInscricao = arqCursoUsuario.create(novaInscricao);
 
-            return true;
+            return idInscricao > 0;
 
-        }catch(Exception e){
-
+        } catch (Exception e) {
             System.out.println(
-                    "\nErro ao realizar inscrição!\n"
+                    "\nErro ao realizar inscricao!\n"
                     + e.getMessage()
             );
 
@@ -109,29 +532,18 @@ public class ControleCursoUsuario {
     private boolean cancelarInscricao(
         int idCurso,
         int idUsuario
-    ){
+    ) {
 
-        try{
+        try {
+            CursoUsuario inscricao =
+                    buscarInscricao(idCurso, idUsuario);
 
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByUsuario(
-                            idUsuario
-                    );
+            return inscricao != null
+                    && arqCursoUsuario.delete(inscricao.getId());
 
-            for(CursoUsuario cu : inscricoes){
-
-                if(cu.getIdCurso() == idCurso){
-
-                    return arqCursoUsuario.delete(
-                            cu.getId()
-                    );
-                }
-            }
-
-        }catch(Exception e){
-
+        } catch (Exception e) {
             System.out.println(
-                    "\nErro ao cancelar inscrição!\n"
+                    "\nErro ao cancelar inscricao!\n"
                     + e.getMessage()
             );
         }
@@ -139,613 +551,161 @@ public class ControleCursoUsuario {
         return false;
     }
 
-    private void listarTodosCursos(
-        Usuario logado
-    ){
+    public boolean cursoTemInscritos(int idCurso) {
+        try {
+            return !arqCursoUsuario.readByCurso(idCurso).isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
-        try{
-
-            ArrayList<Curso> cursos =
-                    arqCursos.readAll();
-
-            if(cursos.isEmpty()){
-
-                System.out.println(
-                        "\nNenhum curso cadastrado."
-                );
-
-                return;
+    public void removerInscricoesDoCurso(int idCurso) {
+        try {
+            for (CursoUsuario inscricao
+                    : new ArrayList<>(arqCursoUsuario.readByCurso(idCurso))) {
+                arqCursoUsuario.delete(inscricao.getId());
             }
-
-            // ordenar por data
-
-            Collections.sort(
-                    cursos,
-                    Comparator.comparing(
-                            Curso::getDataInicio
-                    )
-            );
-
-            int pagina = 0;
-            final int TAMANHO_PAGINA = 10;
-
-            while(true){
-
-                int inicio =
-                        pagina * TAMANHO_PAGINA;
-
-                int fim =
-                        Math.min(
-                                inicio + TAMANHO_PAGINA,
-                                cursos.size()
-                        );
-
-                int totalPaginas =
-                        (int)Math.ceil(
-                                (double)cursos.size()
-                                / TAMANHO_PAGINA
-                        );
-
-                System.out.println(
-                        "\nEntrePares 1.0"
-                );
-
-                System.out.println(
-                        "--------------"
-                );
-
-                System.out.println(
-                        "> Inicio > Minhas inscrições > Lista de cursos"
-                );
-
-                System.out.println(
-                        "\nPágina "
-                        + (pagina + 1)
-                        + " de "
-                        + totalPaginas
-                );
-
-                System.out.println();
-
-                int numeroTela = 1;
-
-                for(int i = inicio; i < fim; i++){
-
-                    Curso curso = cursos.get(i);
-
-                    System.out.println(
-                            "(" + numeroTela + ") "
-                            + curso.getNome()
-                            + " - "
-                            + curso.getDataInicio()
-                            + " ("
-                            + curso.getEstadoTexto()
-                            + ")"
-                    );
-
-                    numeroTela++;
-                }
-
-                System.out.println(
-                        "\n(A) Página anterior"
-                );
-
-                System.out.println(
-                        "(B) Próxima página"
-                );
-
-                System.out.println(
-                        "\n(R) Retornar ao menu anterior"
-                );
-
-                System.out.println(
-                        "\nOpção: "
-                );
-
-                String op =
-                        Entrada.SCANNER
-                                .nextLine()
-                                .trim();
-
-                // selecionar curso
-
-                try{
-
-                    int escolha =
-                            Integer.parseInt(op);
-
-                    int indiceReal =
-                            inicio + (escolha - 1);
-
-                    if(indiceReal >= inicio
-                            && indiceReal < fim){
-
-                        visualizarCursoLista(
-                                logado,
-                                cursos.get(indiceReal)
-                        );
-                    }
-
-                }catch(NumberFormatException e){
-
-                    // navegação
-
-                    if(op.equalsIgnoreCase("A")){
-
-                        if(pagina > 0){
-                            pagina--;
-                        }
-
-                        continue;
-                    }
-
-                    if(op.equalsIgnoreCase("B")){
-
-                        if(fim < cursos.size()){
-                            pagina++;
-                        }
-
-                        continue;
-                    }
-
-                    if(op.equalsIgnoreCase("R")){
-                        return;
-                    }
-
-                    System.out.println(
-                            "\nOpção inválida."
-                    );
-                }
-            }
-
-        }catch(Exception e){
-
+        } catch (Exception e) {
             System.out.println(
-                    "\nErro ao listar cursos!\n"
+                    "\nErro ao remover inscricoes do curso!\n"
                     + e.getMessage()
             );
         }
     }
 
-    public void menuInscricoes(Usuario logado){
-        while(true){
-            System.out.println("\nEntrePares 1.0");
-            System.out.println("--------------");
-            System.out.println("(1) Minhas inscrições");
-            System.out.println("(A) Buscar curso por codigo");
-            System.out.println("(B) Buscar curso por palavras-chave");
-            System.out.println("(C) Listar todos os cursos");
-            System.out.println("\n(R) Retornar ao menu anterior");
-            System.out.println("\nOpção: ");
-
-            String op = Entrada.SCANNER.nextLine().trim();
-
-            if(op.equals("1")){
-                listarMinhasInscricoes(logado);
-                continue;
+    public void removerInscricoesDoUsuario(int idUsuario) {
+        try {
+            for (CursoUsuario inscricao
+                    : new ArrayList<>(arqCursoUsuario.readByUsuario(idUsuario))) {
+                arqCursoUsuario.delete(inscricao.getId());
             }
-
-            if(op.equalsIgnoreCase("A")){
-                buscarCursoPorCodigo(logado);
-                continue;
-            }
-            
-            if(op.equalsIgnoreCase("B")){
-                System.out.println("\nBusca por palavra-chave sera implementada no TP3.");
-                continue;
-            }
-            
-            if(op.equalsIgnoreCase("C")){
-                listarTodosCursos(logado);
-                continue;
-            }
-
-            if(op.equalsIgnoreCase("R")){
-                return;
-            }
-
-            System.out.println("Opcao invalida");
-        }
-    }
-
-    private void listarMinhasInscricoes(
-        Usuario logado
-    ){
-
-        try{
-
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByUsuario(
-                            logado.getId()
-                    );
-
-            if(inscricoes.isEmpty()){
-
-                System.out.println(
-                        "\nVocê não possui inscrições."
-                );
-
-                return;
-            }
-
-            System.out.println("\nMINHAS INSCRIÇÕES\n");
-
-            int contador = 1;
-
-            for(CursoUsuario cu : inscricoes){
-
-                Curso curso =
-                        arqCursos.read(
-                                cu.getIdCurso()
-                        );
-
-                if(curso != null){
-
-                    System.out.println(
-                            "(" + contador + ") "
-                            + curso.getNome()
-                    );
-
-                    contador++;
-                }
-            }
-
+        } catch (Exception e) {
             System.out.println(
-                    "\nDigite o número do curso:"
-            );
-
-            String entrada =
-                    Entrada.SCANNER.nextLine();
-
-            int opcao;
-
-            try{
-
-                opcao = Integer.parseInt(entrada);
-
-            }catch(NumberFormatException e){
-
-                System.out.println(
-                        "\nOpção inválida."
-                );
-
-                return;
-            }
-
-            if(opcao < 1 || opcao > inscricoes.size()){
-
-                System.out.println(
-                        "\nOpção inválida."
-                );
-
-                return;
-            }
-
-            CursoUsuario selecionada =
-                    inscricoes.get(opcao - 1);
-
-            Curso curso =
-                    arqCursos.read(
-                            selecionada.getIdCurso()
-                    );
-
-            if(curso != null){
-
-                visualizarMinhaInscricao(
-                        logado,
-                        curso
-                );
-            }
-
-        }catch(Exception e){
-
-            System.out.println(
-                    "\nErro ao listar inscrições!\n"
+                    "\nErro ao remover inscricoes do usuario!\n"
                     + e.getMessage()
             );
         }
     }
 
-    private void buscarCursoPorCodigo(Usuario logado){
-        System.out.println("\nEntrePares 1.0");
-            System.out.println("--------------");
-            System.out.println("> Inicio > Minhas Inscrições > Buscar curso por codigo");
-            System.out.println("\nDigite o codigo do curso: ");
-            String codigo = Entrada.SCANNER.nextLine().trim();
+    private CursoUsuario buscarInscricao(
+        int idCurso,
+        int idUsuario
+    ) {
 
-            try{
-                Curso cursoEncontrado = arqCursos.buscarPorCodigo(codigo);
+        ArrayList<CursoUsuario> inscricoes =
+                arqCursoUsuario.readByUsuario(idUsuario);
 
-                if(cursoEncontrado == null){
-                    System.out.println("Curso nao encontrado!");
-                    return;
-                }
-
-                Usuario autorCurso = arqUsuarios.read(cursoEncontrado.getIdUsuario());
-                String autor = (autorCurso != null? autorCurso.getNome() : "Usuario desconhecido");
-
-                System.out.println("CÓDIGO........: " + cursoEncontrado.getCodigo());
-                System.out.println("CURSO.........: " + cursoEncontrado.getNome());
-                System.out.println("AUTOR.........: " + autor);
-                System.out.println("DESCRIÇÃO.....: " + cursoEncontrado.getDescricao());
-                System.out.println("DATA DE INÍCIO: " + cursoEncontrado.getDataInicio());
-                
-                System.out.println("\n(A) Fazer minha inscrição no curso");
-                System.out.println("\n(R) Retornar ao menu anterior");
-                System.out.println("\nOpção: ");
-                String opCurso = Entrada.SCANNER.nextLine().trim();
-
-                if(opCurso.equalsIgnoreCase("A")){
-                    //salvar inscricao do usuario no curso
-                    System.out.println("Inscricao feita com sucesso!");
-                }else if(!opCurso.equalsIgnoreCase("R")){
-                    System.out.println("\nOpcao invalida");
-                }
-
-            }catch(Exception e){
-                System.out.println("\nErro ao buscar curso!\n" + e.getMessage());
+        for (CursoUsuario inscricao : inscricoes) {
+            if (inscricao.getIdCurso() == idCurso) {
+                return inscricao;
             }
-    }
-
-    private void visualizarMinhaInscricao(
-        Usuario logado,
-        Curso curso
-    ){
-
-        try{
-
-            Usuario autorCurso =
-                    arqUsuarios.read(
-                            curso.getIdUsuario()
-                    );
-
-            String autor =
-                    (autorCurso != null)
-                    ? autorCurso.getNome()
-                    : "Usuário desconhecido";
-
-            System.out.println("\nEntrePares 1.0");
-            System.out.println("--------------");
-            System.out.println(
-                    "> Inicio > Minhas inscrições > "
-                    + curso.getNome()
-            );
-
-            System.out.println(
-                    "\nCÓDIGO........: "
-                    + curso.getCodigo()
-            );
-
-            System.out.println(
-                    "CURSO.........: "
-                    + curso.getNome()
-            );
-
-            System.out.println(
-                    "AUTOR.........: "
-                    + autor
-            );
-
-            System.out.println(
-                    "DESCRIÇÃO.....: "
-                    + curso.getDescricao()
-            );
-
-            System.out.println(
-                    "DATA DE INÍCIO: "
-                    + curso.getDataInicio()
-            );
-
-            System.out.println(
-                    "\n(A) Cancelar minha inscrição"
-            );
-
-            System.out.println(
-                    "\n(R) Retornar ao menu anterior"
-            );
-
-            System.out.println("\nOpção: ");
-
-            String op =
-                    Entrada.SCANNER.nextLine().trim();
-
-            if(op.equalsIgnoreCase("A")){
-
-                boolean ok =
-                        cancelarInscricao(
-                                curso.getId(),
-                                logado.getId()
-                        );
-
-                if(ok){
-
-                    System.out.println(
-                            "\nInscrição cancelada com sucesso!"
-                    );
-
-                }else{
-
-                    System.out.println(
-                            "\nNão foi possível cancelar inscrição."
-                    );
-                }
-            }
-
-        }catch(Exception e){
-
-            System.out.println(
-                    "\nErro ao visualizar inscrição!\n"
-                    + e.getMessage()
-            );
         }
+
+        return null;
     }
 
-    private void visualizarCursoLista(
-        Usuario logado,
-        Curso curso
-    ){
+    private List<InscricaoCurso> listarInscricoesDoUsuario(
+        int idUsuario
+    ) {
 
-        try{
+        ArrayList<InscricaoCurso> lista = new ArrayList<>();
 
-            Usuario autorCurso =
-                    arqUsuarios.read(
-                            curso.getIdUsuario()
-                    );
+        for (CursoUsuario inscricao
+                : arqCursoUsuario.readByUsuario(idUsuario)) {
+            Curso curso = arqCursos.read(inscricao.getIdCurso());
 
-            String autor =
-                    (autorCurso != null)
-                    ? autorCurso.getNome()
-                    : "Usuário desconhecido";
-
-            System.out.println(
-                    "\nEntrePares 1.0"
-            );
-
-            System.out.println(
-                    "--------------"
-            );
-
-            System.out.println(
-                    "> Inicio > Minhas inscrições > "
-                    + curso.getNome()
-            );
-
-            System.out.println(
-                    "\nCÓDIGO........: "
-                    + curso.getCodigo()
-            );
-
-            System.out.println(
-                    "CURSO.........: "
-                    + curso.getNome()
-            );
-
-            System.out.println(
-                    "AUTOR.........: "
-                    + autor
-            );
-
-            System.out.println(
-                    "DESCRIÇÃO.....: "
-                    + curso.getDescricao()
-            );
-
-            System.out.println(
-                    "DATA DE INÍCIO: "
-                    + curso.getDataInicio()
-            );
-
-            System.out.println(
-                    "\n(A) Fazer minha inscrição"
-            );
-
-            System.out.println(
-                    "\n(R) Retornar ao menu anterior"
-            );
-
-            System.out.println(
-                    "\nOpção: "
-            );
-
-            String op =
-                    Entrada.SCANNER
-                            .nextLine()
-                            .trim();
-
-            if(op.equalsIgnoreCase("A")){
-
-                boolean ok =
-                        inscreverUsuario(
-                                curso.getId(),
-                                logado.getId()
-                        );
-
-                if(ok){
-
-                    System.out.println(
-                            "\nInscrição realizada!"
-                    );
-
-                }else{
-
-                    System.out.println(
-                            "\nNão foi possível realizar inscrição."
-                    );
-                }
+            if (curso == null) {
+                arqCursoUsuario.delete(inscricao.getId());
+                continue;
             }
 
-        }catch(Exception e){
-
-            System.out.println(
-                    "\nErro ao visualizar curso!\n"
-                    + e.getMessage()
-            );
+            lista.add(new InscricaoCurso(inscricao, curso));
         }
+
+        lista.sort(
+                Comparator
+                        .comparing(
+                                (InscricaoCurso item) ->
+                                        dataInicioOrdenacao(item.curso)
+                        )
+                        .thenComparing(
+                                item -> item.curso.getNome(),
+                                String.CASE_INSENSITIVE_ORDER
+                        )
+        );
+
+        return lista;
     }
 
-    private void exportarCSV(Curso curso){
+    private List<InscricaoUsuario> listarInscricoesDoCurso(
+        int idCurso
+    ) {
 
-        try{
+        ArrayList<InscricaoUsuario> lista = new ArrayList<>();
 
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByCurso(
-                            curso.getId()
-                    );
+        for (CursoUsuario inscricao
+                : arqCursoUsuario.readByCurso(idCurso)) {
+            Usuario usuario = arqUsuarios.read(inscricao.getIdUsuario());
 
-            if(inscricoes.isEmpty()){
+            if (usuario == null) {
+                arqCursoUsuario.delete(inscricao.getId());
+                continue;
+            }
 
-                System.out.println(
-                        "\nNão há inscritos neste curso."
-                );
+            lista.add(new InscricaoUsuario(inscricao, usuario));
+        }
 
+        lista.sort(
+                Comparator.comparing(
+                        item -> item.usuario.getNome(),
+                        String.CASE_INSENSITIVE_ORDER
+                )
+        );
+
+        return lista;
+    }
+
+    private void exportarCSV(Curso curso) {
+        try {
+            List<InscricaoUsuario> inscricoes =
+                    listarInscricoesDoCurso(curso.getId());
+
+            if (inscricoes.isEmpty()) {
+                System.out.println("\nNao ha inscritos neste curso.");
                 return;
             }
 
             String nomeArquivo =
-                    "inscritos_" +
-                    curso.getCodigo() +
-                    ".csv";
+                    "inscritos_" + curso.getCodigo() + ".csv";
 
-            FileWriter fw =
-                    new FileWriter(nomeArquivo);
+            try (PrintWriter pw = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(nomeArquivo),
+                            StandardCharsets.UTF_8
+                    )
+            )) {
+                pw.println("nome,email,data_inscricao");
 
-            PrintWriter pw =
-                    new PrintWriter(fw);
-
-            // cabeçalho CSV
-
-            pw.println("nome,email");
-
-            for(CursoUsuario cu : inscricoes){
-
-                Usuario usuario =
-                        arqUsuarios.read(
-                                cu.getIdUsuario()
-                        );
-
-                if(usuario != null){
-
+                for (InscricaoUsuario inscricao : inscricoes) {
                     pw.println(
-                            usuario.getNome()
+                            csv(inscricao.usuario.getNome())
                             + ","
-                            + usuario.getEmail()
+                            + csv(inscricao.usuario.getEmail())
+                            + ","
+                            + csv(
+                                    formatarDataInscricao(
+                                            inscricao.inscricao
+                                                    .getDataInscricao()
+                                    )
+                            )
                     );
                 }
             }
 
-            pw.close();
-            fw.close();
+            System.out.println("\nArquivo CSV exportado com sucesso!");
+            System.out.println("Arquivo: " + nomeArquivo);
 
-            System.out.println(
-                    "\nArquivo CSV exportado com sucesso!"
-            );
-
-            System.out.println(
-                    "Arquivo: " + nomeArquivo
-            );
-
-        }catch(Exception e){
-
+        } catch (Exception e) {
             System.out.println(
                     "\nErro ao exportar CSV!\n"
                     + e.getMessage()
@@ -753,103 +713,137 @@ public class ControleCursoUsuario {
         }
     }
 
-    public void abrirGerenciamentoInscritos(
-        Curso curso
-    ){
+    private void mostrarDadosCurso(
+        Curso curso,
+        String caminho
+    ) {
 
-        try{
+        Usuario autorCurso = arqUsuarios.read(curso.getIdUsuario());
+        String autor =
+                autorCurso != null
+                ? autorCurso.getNome()
+                : "Usuario desconhecido";
 
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByCurso(
-                            curso.getId()
-                    );
+        System.out.println("\nEntrePares 1.0");
+        System.out.println("--------------");
+        System.out.println(caminho);
+        System.out.println("\nCODIGO........: " + curso.getCodigo());
+        System.out.println("CURSO.........: " + curso.getNome());
+        System.out.println("AUTOR.........: " + autor);
+        System.out.println("DESCRICAO.....: " + curso.getDescricao());
+        System.out.println("DATA DE INICIO: " + curso.getDataInicio());
+        System.out.println("SITUACAO......: " + estadoCurso(curso));
+    }
 
-            System.out.println(
-                    "\nEntrePares 1.0"
-            );
+    private int indiceOpcaoPagina(
+        String op,
+        int inicio,
+        int fim
+    ) {
 
-            System.out.println(
-                    "--------------"
-            );
+        if (op.length() != 1 || !Character.isDigit(op.charAt(0))) {
+            return -1;
+        }
 
-            System.out.println(
-                    "> Inicio > Meus cursos > "
-                    + curso.getNome()
-                    + " > Inscrições"
-            );
+        int numero = Integer.parseInt(op);
+        int posicao = numero == 0 ? TAMANHO_PAGINA - 1 : numero - 1;
+        int indiceReal = inicio + posicao;
 
-            System.out.println();
+        return indiceReal >= inicio && indiceReal < fim
+                ? indiceReal
+                : -1;
+    }
 
-            int contador = 1;
-
-            for(CursoUsuario cu : inscricoes){
-
-                Usuario usuario =
-                        arqUsuarios.read(
-                                cu.getIdUsuario()
-                        );
-
-                if(usuario != null){
-
-                    System.out.println(
-                            "(" + contador + ") "
-                            + usuario.getNome()
-                            + " ("
-                            + cu.getDataInscricao()
-                            + ")"
-                    );
-
-                    contador++;
-                }
-            }
-
-            System.out.println(
-                    "\n(A) Exportar lista"
-            );
-
-            System.out.println(
-                    "\n(R) Retornar ao menu anterior"
-            );
-
-            System.out.println(
-                    "\nOpção: "
-            );
-
-            String op =
-                    Entrada.SCANNER
-                            .nextLine()
-                            .trim();
-
-            if(op.equalsIgnoreCase("A")){
-
-                exportarCSV(curso);
-            }
-
-        }catch(Exception e){
-
-            System.out.println(
-                    "\nErro ao gerenciar inscritos!\n"
-                    + e.getMessage()
-            );
+    private Integer parseInteiro(String valor) {
+        try {
+            return Integer.parseInt(valor);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
-    public boolean cursoTemInscritos(
-        int idCurso
-    ){
+    private LocalDate dataInicioOrdenacao(Curso curso) {
+        try {
+            return LocalDate.parse(curso.getDataInicio(), FORMATO_DATA);
+        } catch (DateTimeParseException e) {
+            return LocalDate.MAX;
+        }
+    }
 
-        try{
+    private String formatarDataInscricao(long dataInscricao) {
+        if (dataInscricao <= 0) {
+            return "";
+        }
 
-            ArrayList<CursoUsuario> inscricoes =
-                    arqCursoUsuario.readByCurso(
-                            idCurso
-                    );
+        return Instant
+                .ofEpochMilli(dataInscricao)
+                .atZone(ZoneId.systemDefault())
+                .format(FORMATO_DATA);
+    }
 
-            return !inscricoes.isEmpty();
+    private String sufixoEstado(Curso curso) {
+        if (curso.getEstado() == Curso.ATIVO) {
+            return "";
+        }
 
-        }catch(Exception e){
+        return " (" + estadoCurso(curso) + ")";
+    }
 
-            return false;
+    private String estadoCurso(Curso curso) {
+        switch (curso.getEstado()) {
+            case Curso.ATIVO:
+                return "ABERTO";
+            case Curso.INSCRICOES_ENCERRADAS:
+                return "INSCRICOES ENCERRADAS";
+            case Curso.CONCLUIDO:
+                return "CURSO CONCLUIDO";
+            case Curso.CANCELADO:
+                return "CURSO CANCELADO";
+            default:
+                return "DESCONHECIDO";
+        }
+    }
+
+    private String csv(String valor) {
+        String texto = valor == null ? "" : valor;
+
+        if (
+            texto.contains(",")
+            || texto.contains("\"")
+            || texto.contains("\n")
+            || texto.contains("\r")
+        ) {
+            return "\""
+                    + texto.replace("\"", "\"\"")
+                    + "\"";
+        }
+
+        return texto;
+    }
+
+    private static class InscricaoCurso {
+        private final CursoUsuario inscricao;
+        private final Curso curso;
+
+        private InscricaoCurso(
+            CursoUsuario inscricao,
+            Curso curso
+        ) {
+            this.inscricao = inscricao;
+            this.curso = curso;
+        }
+    }
+
+    private static class InscricaoUsuario {
+        private final CursoUsuario inscricao;
+        private final Usuario usuario;
+
+        private InscricaoUsuario(
+            CursoUsuario inscricao,
+            Usuario usuario
+        ) {
+            this.inscricao = inscricao;
+            this.usuario = usuario;
         }
     }
 }
